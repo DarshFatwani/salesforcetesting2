@@ -13,7 +13,7 @@ public with sharing class DemoAccountService {
             //checking ghost test jataka
             
 
-            // --- INTRODUCING THE LOGIC BREAK HERE ---
+            // --- INTRODUCING THE LOGICsss BREAK HERE ---
             // Simulating a developer adding a strict validation rule
             if (proposedName.contains('Demo')) {
                 // This exception will crash the execution
