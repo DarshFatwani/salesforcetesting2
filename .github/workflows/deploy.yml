@@ -1,60 +1,46 @@
 name: Deploy to Salesforce & Trigger Kamikaze
-
+# Trigger on push to main branch
 on:
-push:
-branches:
-- main
-- test2
-- test4
-- test6
-- test7
-- test8
-- KAN-9
-paths-ignore:
-- '.github/**'
-
+  push:
+    branches: [ "main", "test2", "test4", "test6", "test7" , "test8", "testing","tester","neww/KAN-4","KAN-7","KAN-8","new3" ]
+    paths-ignore:
+      - 'README.md'
+      - '.github/**'
 jobs:
-deploy-and-test:
-runs-on: ubuntu-latest
+  deploy-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Checkout the code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # 2. Install Node.js (Required for Salesforce CLI)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # 3. Install Salesforce CLI
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+      # 4. Authenticate to Salesforce (Using the Secret)
+      - name: Authenticate to Salesforce
+        run: |
+          echo "${{ secrets.SFDX_AUTH_URL }}" > auth_url.txt
+          sf org login sfdx-url --sfdx-url-file auth_url.txt --set-default --alias staging-org
+          rm auth_url.txt
+      # 5. Deploy Code to Salesforce
+      # This pushes your Apex/LWC changes to the Org
+      - name: Deploy Source
+        run: sf project deploy start --target-org staging-org --source-dir force-app --wait 10
+      - name: Trigger Jataka Kamikaze Pods
+        run: |
+          curl -X POST "${{ secrets.JATAKA_API_URL }}/integrations/github/trigger" \
+            -H "Authorization: Bearer ${{ secrets.JATAKA_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "repo_full_name": "${{ github.repository }}",
+              "branch": "${{ github.head_ref || github.ref_name }}",
+            }'
 
-steps:
-  - name: Checkout Code
-    uses: actions/checkout@v4
-    with:
-      fetch-depth: 0
 
-  - name: Setup Node.js
-    uses: actions/setup-node@v4
-    with:
-      node-version: '20'
-
-  - name: Install Salesforce CLI
-    run: npm install --global @salesforce/cli
-
-  - name: Authenticate to Salesforce
-    run: |
-      echo "${{ secrets.SFDX_AUTH_URL }}" > auth_url.txt
-      sf org login sfdx-url --sfdx-url-file auth_url.txt --alias staging-org --set-default
-      rm auth_url.txt
-
-  - name: Verify Org Connection
-    run: sf org display --target-org staging-org
-
-  - name: Deploy Source to Salesforce
-    run: |
-      sf project deploy start \
-        --target-org staging-org \
-        --source-dir force-app \
-        --wait 10
-
-  - name: Trigger Jataka Kamikaze Pods
-    run: |
-      curl -X POST "https://api.shodh.ai/integrations/github/trigger" \
-      -H "Authorization: Bearer ${{ secrets.JATAKA_API_KEY }}" \
-      -H "Content-Type: application/json" \
-      -d '{
-        "repo_full_name": "${{ github.repository }}",
-        "branch": "${{ github.ref_name }}",
-        "pr_number": 0
-      }'
-```
